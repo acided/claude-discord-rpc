@@ -2,12 +2,10 @@
 
 Discord Rich Presence for [Claude Code](https://claude.com/claude-code). It shows what Claude is doing right now, project and action included:
 
-```
-Playing Claude Code
-Working on fpsm
-Editing main.py
-00:42 elapsed
-```
+<p>
+  <img src="docs/presence.png" alt="Discord profile showing Claude Code activity" width="420">
+  <img src="docs/tooltip.png" alt="Small icon tooltip with the current model" width="200">
+</p>
 
 - Starts and stops together with Claude Code. There is nothing to launch by hand and no Windows autostart entry.
 - No dependencies: Python 3.11+ standard library only. It talks to Discord's local IPC pipe directly.
