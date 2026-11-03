@@ -1,0 +1,14 @@
+[project]
+name = "claude-discord-rpc"
+version = "0.1.0"
+description = "Discord Rich Presence for Claude Code, driven by Claude Code hooks"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

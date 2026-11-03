@@ -1,0 +1,50 @@
+# claude-discord-rpc config.
+# Location: %APPDATA%\claude-discord-rpc\config.toml  (install.py creates it from this file)
+# Changes are picked up automatically, no restart needed.
+
+# Optional: your own Application ID from https://discord.com/developers/applications
+# (its name is shown as "Playing <name>"). By default the shared "Claude Code" app is used.
+# client_id = ""
+
+# Dump raw hook payloads to %LOCALAPPDATA%\claude-discord-rpc\payloads.log
+debug = false
+
+[privacy]
+show_files = true      # "Editing main.py" vs "Editing a file"
+show_commands = true   # "Running git" vs "Running a command" (arguments are never shown)
+# Glob patterns matched against the project name and its full path (case-insensitive).
+# Matching projects show as "Secret project" with file and command names hidden.
+blacklist = [
+  # "client-*",
+  # "C:/Users/me/work/*",
+]
+
+[timing]
+stale_minutes = 30       # drop a session with no events for this long (terminal closed without SessionEnd)
+idle_exit_seconds = 120  # daemon exits after this long without any session
+
+# Art Asset keys (or https:// URLs). Uncomment only to override the built-in defaults.
+# Hover texts are templates: {model} (e.g. "Opus 5.5"), {state} (e.g. "Editing").
+# With several sessions open, " · N sessions" is appended to the small icon's text.
+[images]
+# large = "logo"
+# large_text = "claude.ai"
+# small = "claude-code"          # "" to disable the small icon
+# small_text = "Clawd · {model}"
+# Per-state small icons, override `small` for that state.
+[images.small_states]
+# thinking = "thinking"
+# running = "terminal"
+
+# Up to 2 buttons. Other people see them; Discord hides your own buttons from you.
+# [[buttons]]
+# label = "GitHub"
+# url = "https://github.com/yourname"
+
+# Override any phrase pool. A list here replaces the default pool for that category.
+# Categories: details, home, secret, starting, thinking, editing, reading, searching,
+# running, web, subagents, mcp, planning, question, approval, idle, working
+# Placeholders: {project} {file} {cmd} {server} {tool}
+[phrases]
+# thinking = ["Thinking…", "Brain go brrr", "Overthinking it"]
+# idle = ["Waiting for input", "AFK"]
