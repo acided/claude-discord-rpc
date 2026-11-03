@@ -4,6 +4,7 @@ import json
 import os
 import re
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -55,11 +56,14 @@ def load_sessions(
     directory: Path | None = None,
     now: float | None = None,
     purge_seconds: float = PURGE_SECONDS,
+    is_alive: Callable[[dict[str, Any]], bool | None] | None = None,
 ) -> list[dict[str, Any]]:
-    """Sessions with activity within `stale_seconds`.
+    """Sessions to show.
 
-    Stale sessions are only hidden (the user may come back and keep the elapsed timer);
-    files are deleted after `purge_seconds` (terminal closed without SessionEnd).
+    `is_alive` decides first: True shows the session however long it has been idle, False
+    deletes its file (the process is gone). None, or no `is_alive`, falls back to timeouts:
+    sessions without activity within `stale_seconds` are only hidden (the user may come
+    back and keep the elapsed timer), files are deleted after `purge_seconds`.
     """
     directory = directory or paths.SESSIONS_DIR
     now = now or time.time()
@@ -76,12 +80,17 @@ def load_sessions(
             continue
         if not isinstance(data, dict):
             continue
+        alive = is_alive(data) if is_alive else None
+        if alive:
+            sessions.append(data)
+            continue
         age = now - float(data.get("updated_at", 0))
-        if age > purge_seconds:
+        if alive is False or age > purge_seconds:
             try:
                 file.unlink(missing_ok=True)
             except OSError:
                 pass
+            continue
         if age > stale_seconds:
             continue
         sessions.append(data)

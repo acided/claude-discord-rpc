@@ -17,6 +17,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from claude_discord_rpc import config, lock, paths, presence, state
+from claude_discord_rpc.agents import AgentsPoller
 from claude_discord_rpc.ipc import DiscordIPC
 
 TICK = 2.0
@@ -46,6 +47,7 @@ def _setup_logging(debug: bool) -> None:
 class Daemon:
     def __init__(self) -> None:
         self.cfg_cache = config.ConfigCache()
+        self.agents = AgentsPoller()
         self.rpc: DiscordIPC | None = None
         self.last_activity: Any = object()  # sentinel: forces the first send
         self.last_send = 0.0
@@ -99,7 +101,11 @@ class Daemon:
         now = time.time()
         cfg = self.cfg_cache.get()
         timing = cfg.get("timing", {})
-        sessions = state.load_sessions(float(timing.get("stale_minutes", 30)) * 60)
+        is_alive = None
+        if timing.get("process_check", True):
+            self.agents.poll(now)
+            is_alive = self.agents.is_alive
+        sessions = state.load_sessions(float(timing.get("stale_minutes", 30)) * 60, now=now, is_alive=is_alive)
 
         if sessions:
             self.empty_since = None

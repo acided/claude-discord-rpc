@@ -27,6 +27,7 @@ Hooks are short-lived processes, but Discord keeps a presence only while the IPC
 - The hook (~50 ms) records the session's current state and spawns the daemon on demand (`pythonw`, detached, no window).
 - On Windows the daemon runs as `claude-rpc.exe`, a copy of `pythonw.exe` in `%LOCALAPPDATA%\claude-discord-rpc\`, so Task Manager lists it as «Claude Code Discord RPC» instead of «Python». The copy is refreshed automatically when Python is updated.
 - The daemon sends updates only when something changes, and never more than once per 4 s, which keeps it under Discord's rate limit. If Discord restarts, it reconnects.
+- Every 10 s the daemon asks `claude agents --json` which sessions are still running. A session whose terminal was closed without `SessionEnd` disappears within seconds, and an open session stays visible however long it sits idle. If the CLI is unavailable (or doesn't list a session, e.g. `claude -p`), the 30-minute `stale_minutes` timeout applies instead.
 - When the last session ends, the presence is cleared and the daemon exits 2 minutes later.
 
 Hooked events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `Notification`, `Stop`, `SessionEnd`.
@@ -65,7 +66,8 @@ Uninstall: `python install.py --uninstall`.
 | `images.small_states.<state>` | – | per-state small icon |
 | `buttons` | – | up to 2 link buttons |
 | `phrases.<category>` | built-in | your own phrase pool for a state |
-| `timing.stale_minutes` | `30` | drop sessions with no events (terminal closed abruptly) |
+| `timing.process_check` | `true` | detect closed sessions via `claude agents --json` |
+| `timing.stale_minutes` | `30` | fallback: hide sessions with no events for this long |
 
 ## Troubleshooting
 
@@ -76,6 +78,7 @@ Uninstall: `python install.py --uninstall`.
 | Inspect raw hook payloads | set `debug = true` → `payloads.log` |
 | Watch the daemon live | `python claude_discord_rpc/daemon.py --stop`, then `python claude_discord_rpc/daemon.py --debug` |
 | Is the daemon running? | Task Manager → «Claude Code Discord RPC» (`claude-rpc.exe` on the Details tab) |
+| Closed session still shown | `daemon.log`: a `claude agents --json unavailable` warning means the 30-minute fallback is in use |
 | Image missing | the asset key must match exactly, and newly uploaded assets can take a few minutes |
 
 ## Development

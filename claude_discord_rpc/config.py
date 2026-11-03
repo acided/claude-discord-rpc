@@ -21,6 +21,9 @@ DEFAULTS: dict[str, Any] = {
         "blacklist": [],
     },
     "timing": {
+        # Ask `claude agents --json` which sessions are still running; stale_minutes is then
+        # only a fallback for sessions the CLI doesn't list.
+        "process_check": True,
         "stale_minutes": 30,
         "idle_exit_seconds": 120,
     },

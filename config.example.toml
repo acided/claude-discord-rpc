@@ -20,7 +20,8 @@ blacklist = [
 ]
 
 [timing]
-stale_minutes = 30       # drop a session with no events for this long (terminal closed without SessionEnd)
+process_check = true     # ask `claude agents --json` which sessions still run; a closed terminal disappears in ~10 s
+stale_minutes = 30       # fallback when that's unavailable: hide a session with no events for this long
 idle_exit_seconds = 120  # daemon exits after this long without any session
 
 # Art Asset keys (or https:// URLs). Uncomment only to override the built-in defaults.
