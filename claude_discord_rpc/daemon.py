@@ -48,6 +48,7 @@ class Daemon:
     def __init__(self) -> None:
         self.cfg_cache = config.ConfigCache()
         self.agents = AgentsPoller()
+        self.shown_id: str | None = None
         self.rpc: DiscordIPC | None = None
         self.last_activity: Any = object()  # sentinel: forces the first send
         self.last_send = 0.0
@@ -131,7 +132,10 @@ class Daemon:
             self._connect(client_id, now)
 
         live = self.agents.live if is_alive else None
-        self._send(presence.build(sessions, cfg, live, self.agents.polled_at), now)
+        activity, self.shown_id = presence.compose(
+            sessions, cfg, live, self.agents.polled_at, previous_id=self.shown_id, now=now
+        )
+        self._send(activity, now)
         return True
 
     def run(self) -> None:

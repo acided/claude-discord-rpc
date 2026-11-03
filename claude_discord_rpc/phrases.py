@@ -68,10 +68,11 @@ DEFAULT_POOLS: dict[str, list[str]] = {
         "Reading the docs",
         "Googling stuff",
     ],
+    # {agents}: "subagents", "the Explore agent", "3 subagents" (rendered live by the daemon)
     "subagents": [
-        "Delegating to subagents",
-        "Spawning helpers",
-        "Running a team of agents",
+        "Delegating to {agents}",
+        "Running {agents}",
+        "Coordinating {agents}",
     ],
     "mcp": [
         "Using {server}",
@@ -160,6 +161,19 @@ def render(template: str, variables: dict[str, str]) -> str:
     return truncate(text, MAX_LEN)
 
 
+def choose_template(
+    category: str,
+    last_idx: dict[str, int],
+    cfg: dict[str, Any] | None = None,
+    rng: random.Random | None = None,
+) -> str:
+    """Pick a non-repeating template for `category` and update `last_idx` in place."""
+    pool = pool_for(category, cfg)
+    idx = pick_index(len(pool), last_idx.get(category), rng)
+    last_idx[category] = idx
+    return pool[idx]
+
+
 def choose(
     category: str,
     variables: dict[str, str],
@@ -167,8 +181,5 @@ def choose(
     cfg: dict[str, Any] | None = None,
     rng: random.Random | None = None,
 ) -> str:
-    """Pick a non-repeating template for `category`, update `last_idx` in place, render it."""
-    pool = pool_for(category, cfg)
-    idx = pick_index(len(pool), last_idx.get(category), rng)
-    last_idx[category] = idx
-    return render(pool[idx], variables)
+    """Pick a non-repeating template for `category` and render it."""
+    return render(choose_template(category, last_idx, cfg, rng), variables)

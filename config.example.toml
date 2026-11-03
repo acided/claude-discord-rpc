@@ -45,7 +45,7 @@ idle_exit_seconds = 120  # daemon exits after this long without any session
 # Override any phrase pool. A list here replaces the default pool for that category.
 # Categories: details, home, secret, starting, thinking, editing, reading, searching,
 # running, web, subagents, mcp, planning, question, approval, idle, working
-# Placeholders: {project} {file} {cmd} {server} {tool}
+# Placeholders: {project} {file} {cmd} {server} {tool} {agents} (subagents: "the Explore agent", "3 subagents")
 [phrases]
 # thinking = ["Thinking…", "Brain go brrr", "Overthinking it"]
 # idle = ["Waiting for input", "AFK"]

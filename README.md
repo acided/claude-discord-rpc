@@ -11,7 +11,8 @@ Discord Rich Presence for [Claude Code](https://claude.com/claude-code). It show
 - No dependencies: Python 3.11+ standard library only. It talks to Discord's local IPC pipe directly.
 - Several phrasings for every state («Editing / Tweaking / Polishing main.py»). A phrasing is picked once when the state changes, so the status doesn't flicker.
 - Privacy controls: hide file names or commands, or blacklist projects so they show as «Secret project». Command arguments are never shown.
-- With several Claude Code sessions open, it shows the most recently active one plus the session count, and how many others are blocked on you («Editing main.py · 1 waiting on you»).
+- Subagents: «Delegating to the Explore agent», «Running 3 subagents»; background ones are counted after the main state («Waiting for input · 1 subagent»). A subagent's own tool calls don't hijack the main status.
+- With several Claude Code sessions open, one working session is shown over waiting and idle ones and stays on screen while it works (parallel sessions don't take turns), plus the session count and how many others are blocked on you («Editing main.py · 1 waiting on you»).
 
 ## How it works
 
@@ -31,7 +32,7 @@ Hooks are short-lived processes, but Discord keeps a presence only while the IPC
 - The same listing carries each session's status (busy / idle / waiting). It corrects what hooks can't report: a turn interrupted with Esc (no `Stop` hook) shows as idle, and a session blocked on a dialog shows as waiting.
 - When the last session ends, the presence is cleared and the daemon exits 2 minutes later.
 
-Hooked events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `Notification`, `Stop`, `SessionEnd`.
+Hooked events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `Notification`, `Stop`, `SubagentStart`, `SubagentStop`, `SessionEnd`. After updating, run `python install.py` again to register new events.
 
 > Unofficial community project, not affiliated with or endorsed by Anthropic.
 

@@ -109,7 +109,7 @@ def test_pretty_model(model, expected):
 # phrases ------------------------------------------------------------------
 
 def test_every_default_template_renders():
-    variables = {"project": "p", "file": "f.py", "cmd": "git", "server": "s", "tool": "t"}
+    variables = {"project": "p", "file": "f.py", "cmd": "git", "server": "s", "tool": "t", "agents": "2 subagents"}
     for category, pool in phrases.DEFAULT_POOLS.items():
         assert pool, category
         for template in pool:

@@ -16,8 +16,11 @@ from claude_discord_rpc import lock, paths
 
 SETTINGS = Path.home() / ".claude" / "settings.json"
 MARKER = "claude_discord_rpc"
-EVENTS = ["SessionStart", "UserPromptSubmit", "PreToolUse", "Notification", "Stop", "SessionEnd"]
-TOOL_EVENTS = {"PreToolUse"}
+EVENTS = [
+    "SessionStart", "UserPromptSubmit", "PreToolUse", "Notification", "Stop",
+    "SubagentStart", "SubagentStop", "SessionEnd",
+]
+MATCHER_EVENTS = {"PreToolUse", "SubagentStart", "SubagentStop"}
 
 
 def hook_command() -> str:
@@ -51,7 +54,7 @@ def update_settings(install: bool) -> None:
     if install:
         entry = {"type": "command", "command": hook_command(), "timeout": 5}
         for event in EVENTS:
-            group = {"matcher": "*", "hooks": [entry]} if event in TOOL_EVENTS else {"hooks": [entry]}
+            group = {"matcher": "*", "hooks": [entry]} if event in MATCHER_EVENTS else {"hooks": [entry]}
             hooks.setdefault(event, []).append(group)
     if not hooks:
         settings.pop("hooks")

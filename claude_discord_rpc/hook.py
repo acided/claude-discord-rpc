@@ -19,6 +19,8 @@ from claude_discord_rpc import config, launcher, lock, paths, phrases, state
 from claude_discord_rpc.events import classify, model_from_transcript, pretty_model, resolve_project
 
 SPAWN_COOLDOWN = 5.0
+# A subagent with no events for this long is assumed gone (e.g. killed by Esc, no SubagentStop).
+AGENT_STALE_SECONDS = 15 * 60
 
 
 def _log(path: Path, text: str, max_bytes: int = 512 * 1024) -> None:
@@ -50,6 +52,13 @@ def update_session(payload: dict[str, Any], cfg: dict[str, Any], now: float | No
     last_idx: dict[str, int] = session.setdefault("last_idx", {})
     privacy = cfg.get("privacy", {})
 
+    if update_agents(session, payload, now):
+        # A subagent's own events don't change the main thread's state (or its cwd: a
+        # subagent may work in a worktree); they only keep the session marked as active.
+        session["updated_at"] = now
+        state.write_session(session)
+        return session
+
     cwd = payload.get("cwd") or session.get("cwd") or str(Path.cwd())
     project = resolve_project(cwd, list(privacy.get("blacklist", [])))
     project_key = [project.kind, project.name]
@@ -64,7 +73,10 @@ def update_session(payload: dict[str, Any], cfg: dict[str, Any], now: float | No
         show_commands=bool(privacy.get("show_commands", True)) and not secret,
     )
     if session.get("state_key") != event.key:
-        session["state_text"] = phrases.choose(event.category, event.variables, last_idx, cfg)
+        template = phrases.choose_template(event.category, last_idx, cfg)
+        session["state_template"] = template  # re-rendered by the daemon for live variables
+        session["state_vars"] = event.variables
+        session["state_text"] = phrases.render(template, {**event.variables, "agents": "subagents"})
         session["state_key"] = event.key
         session["category"] = event.category
 
@@ -81,6 +93,34 @@ def update_session(payload: dict[str, Any], cfg: dict[str, Any], now: float | No
     session["updated_at"] = now
     state.write_session(session)
     return session
+
+
+def update_agents(session: dict[str, Any], payload: dict[str, Any], now: float) -> bool:
+    """Track the session's running subagents. Returns True for events fired inside a subagent."""
+    agents: dict[str, dict[str, Any]] = session.setdefault("agents", {})
+    event_name = payload.get("hook_event_name", "")
+    agent_id = payload.get("agent_id")
+    for stale in [k for k, a in agents.items() if now - float(a.get("updated_at", 0)) > AGENT_STALE_SECONDS]:
+        del agents[stale]
+
+    if event_name == "Stop" and isinstance(payload.get("background_tasks"), list):
+        # The main thread is done: only subagents still listed as background work are running.
+        running = {
+            t.get("id") for t in payload["background_tasks"] if isinstance(t, dict) and t.get("type") == "local_agent"
+        }
+        for gone in [k for k in agents if k not in running]:
+            del agents[gone]
+    if not agent_id:
+        return False
+    agent_id = str(agent_id)
+    if event_name == "SubagentStop":
+        agents.pop(agent_id, None)
+    else:  # SubagentStart, or any event from a subagent we missed the start of
+        agent = agents.setdefault(agent_id, {"started_at": now})
+        if payload.get("agent_type"):
+            agent["type"] = str(payload["agent_type"])[:32]
+        agent["updated_at"] = now
+    return True
 
 
 def ensure_daemon() -> None:
