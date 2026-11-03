@@ -102,3 +102,17 @@ class AgentsPoller:
         if session_id in self.seen and float(session.get("updated_at", 0)) < self.polled_at:
             return False
         return None
+
+    def is_hidden(self, session: dict[str, Any]) -> bool:
+        """True for a session to keep off the presence without deleting its file.
+
+        Claude Code pre-warms "spare" background sessions: they fire SessionStart but the CLI
+        never lists them. While the CLI works, a session it has never listed that is still in
+        "starting" is treated as such a spare. Its first prompt changes the category, and from
+        then on it counts like any other session.
+        """
+        return (
+            self.live is not None
+            and session.get("session_id") not in self.seen
+            and session.get("category") == "starting"
+        )

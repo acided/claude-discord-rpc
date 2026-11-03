@@ -102,11 +102,13 @@ class Daemon:
         now = time.time()
         cfg = self.cfg_cache.get()
         timing = cfg.get("timing", {})
-        is_alive = None
+        is_alive = is_hidden = None
         if timing.get("process_check", True):
             self.agents.poll(now)
-            is_alive = self.agents.is_alive
-        sessions = state.load_sessions(float(timing.get("stale_minutes", 30)) * 60, now=now, is_alive=is_alive)
+            is_alive, is_hidden = self.agents.is_alive, self.agents.is_hidden
+        sessions = state.load_sessions(
+            float(timing.get("stale_minutes", 30)) * 60, now=now, is_alive=is_alive, is_hidden=is_hidden
+        )
 
         if sessions:
             self.empty_since = None

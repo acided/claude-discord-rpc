@@ -57,6 +57,7 @@ def load_sessions(
     now: float | None = None,
     purge_seconds: float = PURGE_SECONDS,
     is_alive: Callable[[dict[str, Any]], bool | None] | None = None,
+    is_hidden: Callable[[dict[str, Any]], bool] | None = None,
 ) -> list[dict[str, Any]]:
     """Sessions to show.
 
@@ -64,6 +65,7 @@ def load_sessions(
     deletes its file (the process is gone). None, or no `is_alive`, falls back to timeouts:
     sessions without activity within `stale_seconds` are only hidden (the user may come
     back and keep the elapsed timer), files are deleted after `purge_seconds`.
+    `is_hidden` (checked when liveness is unknown) hides a session but keeps its file.
     """
     directory = directory or paths.SESSIONS_DIR
     now = now or time.time()
@@ -91,7 +93,7 @@ def load_sessions(
             except OSError:
                 pass
             continue
-        if age > stale_seconds:
+        if age > stale_seconds or (is_hidden and is_hidden(data)):
             continue
         sessions.append(data)
     return sessions

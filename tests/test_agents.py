@@ -83,6 +83,30 @@ def test_load_sessions_with_liveness(tmp_path):
     assert (tmp_path / "unknown-stale.json").exists()  # hidden, not deleted
 
 
+def test_spare_sessions_hidden(tmp_path):
+    files = {
+        "spare": "starting",  # pre-warmed, fired SessionStart, never listed by the CLI
+        "headless": "thinking",  # e.g. claude -p: never listed, but it got a prompt
+        "new": "starting",  # listed by the CLI: a real session nobody typed into yet
+    }
+    for sid, category in files.items():
+        state.write_session({"session_id": sid, "updated_at": 990, "category": category}, tmp_path)
+    poller = agents.AgentsPoller(FakeCli(listing("new")), interval=10)
+
+    # CLI not polled yet: no way to tell a spare apart, nothing is hidden
+    unknown = state.load_sessions(60, tmp_path, now=1000, is_alive=poller.is_alive, is_hidden=poller.is_hidden)
+    assert len(unknown) == 3
+
+    poller.poll(1000)
+    shown = state.load_sessions(60, tmp_path, now=1000, is_alive=poller.is_alive, is_hidden=poller.is_hidden)
+    assert sorted(s["session_id"] for s in shown) == ["headless", "new"]
+    assert (tmp_path / "spare.json").exists()  # kept: it may become a real session
+
+    state.write_session({"session_id": "spare", "updated_at": 1001, "category": "thinking"}, tmp_path)
+    shown = state.load_sessions(60, tmp_path, now=1002, is_alive=poller.is_alive, is_hidden=poller.is_hidden)
+    assert "spare" in {s["session_id"] for s in shown}  # first prompt: counts from now on
+
+
 # CLI status in presence ---------------------------------------------------
 
 
