@@ -25,6 +25,7 @@ daemon.py ──every 2 s: read sessions, build activity──> Discord IPC pipe
 Hooks are short-lived processes, but Discord keeps a presence only while the IPC connection stays open. So a small background daemon owns the connection:
 
 - The hook (~50 ms) records the session's current state and spawns the daemon on demand (`pythonw`, detached, no window).
+- On Windows the daemon runs as `claude-rpc.exe`, a copy of `pythonw.exe` in `%LOCALAPPDATA%\claude-discord-rpc\`, so Task Manager lists it as «Claude Code Discord RPC» instead of «Python». The copy is refreshed automatically when Python is updated.
 - The daemon sends updates only when something changes, and never more than once per 4 s, which keeps it under Discord's rate limit. If Discord restarts, it reconnects.
 - When the last session ends, the presence is cleared and the daemon exits 2 minutes later.
 
@@ -74,6 +75,7 @@ Uninstall: `python install.py --uninstall`.
 | Hook errors | `%LOCALAPPDATA%\claude-discord-rpc\hook-errors.log` |
 | Inspect raw hook payloads | set `debug = true` → `payloads.log` |
 | Watch the daemon live | `python claude_discord_rpc/daemon.py --stop`, then `python claude_discord_rpc/daemon.py --debug` |
+| Is the daemon running? | Task Manager → «Claude Code Discord RPC» (`claude-rpc.exe` on the Details tab) |
 | Image missing | the asset key must match exactly, and newly uploaded assets can take a few minutes |
 
 ## Development

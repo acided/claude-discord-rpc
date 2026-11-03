@@ -15,7 +15,7 @@ from typing import Any
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from claude_discord_rpc import config, lock, paths, phrases, state
+from claude_discord_rpc import config, launcher, lock, paths, phrases, state
 from claude_discord_rpc.events import classify, model_from_transcript, pretty_model, resolve_project
 
 SPAWN_COOLDOWN = 5.0
@@ -93,9 +93,7 @@ def ensure_daemon() -> None:
         pass
     paths.SPAWN_MARKER.touch()
 
-    exe = Path(sys.executable)
-    pythonw = exe.with_name("pythonw.exe")
-    interpreter = str(pythonw if pythonw.exists() else exe)
+    interpreter, env = launcher.daemon_command()
     daemon = str(paths.PACKAGE_DIR / "daemon.py")
     kwargs: dict[str, Any] = {
         "stdin": subprocess.DEVNULL,
@@ -103,6 +101,7 @@ def ensure_daemon() -> None:
         "stderr": subprocess.DEVNULL,
         "close_fds": True,
         "cwd": str(paths.DATA_DIR),
+        "env": env,
     }
     if sys.platform == "win32":
         base = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
