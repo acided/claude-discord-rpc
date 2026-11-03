@@ -130,7 +130,8 @@ class Daemon:
         if self.rpc is None:
             self._connect(client_id, now)
 
-        self._send(presence.build(sessions, cfg), now)
+        live = self.agents.live if is_alive else None
+        self._send(presence.build(sessions, cfg, live, self.agents.polled_at), now)
         return True
 
     def run(self) -> None:

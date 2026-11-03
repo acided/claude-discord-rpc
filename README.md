@@ -11,7 +11,7 @@ Discord Rich Presence for [Claude Code](https://claude.com/claude-code). It show
 - No dependencies: Python 3.11+ standard library only. It talks to Discord's local IPC pipe directly.
 - Several phrasings for every state («Editing / Tweaking / Polishing main.py»). A phrasing is picked once when the state changes, so the status doesn't flicker.
 - Privacy controls: hide file names or commands, or blacklist projects so they show as «Secret project». Command arguments are never shown.
-- With several Claude Code sessions open, it shows the most recently active one plus the session count.
+- With several Claude Code sessions open, it shows the most recently active one plus the session count, and how many others are blocked on you («Editing main.py · 1 waiting on you»).
 
 ## How it works
 
@@ -28,6 +28,7 @@ Hooks are short-lived processes, but Discord keeps a presence only while the IPC
 - On Windows the daemon runs as `claude-rpc.exe`, a copy of `pythonw.exe` in `%LOCALAPPDATA%\claude-discord-rpc\`, so Task Manager lists it as «Claude Code Discord RPC» instead of «Python». The copy is refreshed automatically when Python is updated.
 - The daemon sends updates only when something changes, and never more than once per 4 s, which keeps it under Discord's rate limit. If Discord restarts, it reconnects.
 - Every 10 s the daemon asks `claude agents --json` which sessions are still running. A session whose terminal was closed without `SessionEnd` disappears within seconds, and an open session stays visible however long it sits idle. If the CLI is unavailable (or doesn't list a session, e.g. `claude -p`), the 30-minute `stale_minutes` timeout applies instead.
+- The same listing carries each session's status (busy / idle / waiting). It corrects what hooks can't report: a turn interrupted with Esc (no `Stop` hook) shows as idle, and a session blocked on a dialog shows as waiting.
 - When the last session ends, the presence is cleared and the daemon exits 2 minutes later.
 
 Hooked events: `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `Notification`, `Stop`, `SessionEnd`.

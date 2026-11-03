@@ -1,9 +1,10 @@
 import json
 import subprocess
+from pathlib import Path
 
 import pytest
 
-from claude_discord_rpc import agents, state
+from claude_discord_rpc import agents, config, presence, state
 
 ENTRY = {"pid": 1, "sessionId": "a", "kind": "interactive", "status": "busy", "cwd": "C:\\x"}
 
@@ -80,3 +81,57 @@ def test_load_sessions_with_liveness(tmp_path):
     assert sorted(s["session_id"] for s in shown) == ["running", "unknown"]
     assert not (tmp_path / "gone.json").exists()
     assert (tmp_path / "unknown-stale.json").exists()  # hidden, not deleted
+
+
+# CLI status in presence ---------------------------------------------------
+
+
+def sess(sid, updated, category, state_text="Editing a.py"):
+    return {"session_id": sid, "started_at": 1, "updated_at": updated, "category": category,
+            "details_text": "Working on x", "state_text": state_text}
+
+
+@pytest.mark.parametrize(
+    "category, entry, expected",
+    [
+        ("running", {"status": "idle"}, "idle"),  # interrupted with Esc
+        ("planning", {"status": "waiting", "waitingFor": "dialog open"}, "question"),
+        ("running", {"status": "waiting", "waitingFor": "permission prompt"}, "approval"),
+        ("idle", {"status": "busy"}, "thinking"),
+        ("editing", {"status": "busy"}, "editing"),  # consistent: hook detail wins
+        ("approval", {"status": "waiting", "waitingFor": "dialog open"}, "approval"),
+    ],
+)
+def test_cli_status_corrects_hook_state(category, entry, expected):
+    cfg = config.load(Path("does-not-exist.toml"))
+    fixed = presence.apply_cli_status(sess("a", 10, category), entry, snapshot_at=20, cfg=cfg)
+    assert fixed["category"] == expected
+    if expected != category:
+        # stable phrase: the daemon recomputes it every tick
+        again = presence.apply_cli_status(sess("a", 10, category), entry, snapshot_at=30, cfg=cfg)
+        assert again["state_text"] == fixed["state_text"]
+
+
+def test_fresh_hook_event_beats_cli_snapshot():
+    cfg = config.load(Path("does-not-exist.toml"))
+    s = sess("a", 19, "thinking")  # prompt submitted 1 s before the snapshot
+    assert presence.apply_cli_status(s, {"status": "idle"}, snapshot_at=20, cfg=cfg) is s
+
+
+def test_build_counts_waiting_sessions():
+    cfg = config.load(Path("does-not-exist.toml"))
+    sessions = [sess("a", 10, "editing"), sess("b", 5, "approval", "Waiting for approval"), sess("c", 4, "running")]
+    live = {
+        "a": {"status": "busy"},
+        "b": {"status": "waiting", "waitingFor": "permission prompt"},
+        "c": {"status": "waiting", "waitingFor": "input needed"},  # blocked on a dialog, no hook said so
+        "d": {"status": "waiting"},  # running, no hook data yet
+    }
+    act = presence.build(sessions, cfg, live, snapshot_at=100)
+    assert act["state"] == "Editing a.py · 3 waiting on you"
+    assert act["assets"]["small_text"].endswith("· 4 sessions")
+
+    # without CLI data: hook state only
+    act = presence.build(sessions, cfg)
+    assert act["state"] == "Editing a.py · 1 waiting on you"
+    assert act["assets"]["small_text"].endswith("· 3 sessions")
