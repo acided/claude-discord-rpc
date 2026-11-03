@@ -81,3 +81,7 @@ Uninstall: `python install.py --uninstall`.
 ```powershell
 uv run pytest
 ```
+
+## License
+
+[MIT](LICENSE)
